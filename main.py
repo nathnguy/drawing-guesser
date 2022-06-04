@@ -12,11 +12,11 @@ HEIGHT = 500
 
 IMAGE_SIZE = 28
 
-COORD_SIZE = 150
+COORD_SIZE = 125
 
 NUM_SAMPLES = 1000
 
-win = GraphWin("Generative Line Art", WIDTH, HEIGHT, autoflush=False)
+win = GraphWin("Bird Drawing Guesser", WIDTH, HEIGHT, autoflush=False)
 win.setCoords(0, COORD_SIZE, COORD_SIZE, 0)
 objects = [] # all objects currently drawn
 
@@ -66,9 +66,9 @@ def main():
     corners, locs = num_corners(np.reshape(drawing, (-1, IMAGE_SIZE)))
     if corners < 150:
       level1.append((drawing, locs))
-    elif corners > 250 and corners < 300:
+    elif corners > 300 and corners < 350:
       level2.append((drawing, locs))
-    elif corners > 400 and corners < 450:
+    elif corners > 500 and corners < 550:
       level3.append((drawing, locs))
 
   print(len(level1))
@@ -88,7 +88,7 @@ def main():
       break
 
     draw(drawing[0])
-    label_corners(drawing[1])
+    # label_corners(drawing[1])
   
   win.close()
 
