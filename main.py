@@ -7,6 +7,12 @@ from harris import num_corners
 import numpy as np
 import random
 
+from generator import Generator
+import matplotlib.pyplot as plt
+import torch
+from gan import batch_size
+
+
 # window size
 WIDTH = 500
 HEIGHT = 500
@@ -177,5 +183,22 @@ def test():
   
   win.close()
 
+def test():
+  device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+  generator = Generator()
+  generator.load_state_dict(torch.load('model/generator.pth'))
+  latent_space_samples = torch.randn(batch_size, 100).to(device=device)
+  generated_samples = generator(latent_space_samples)
+
+  generated_samples = generated_samples.cpu().detach()
+  for i in range(16):
+      ax = plt.subplot(4, 4, i + 1)
+      plt.imshow(generated_samples[i].reshape(28, 28), cmap="gray_r")
+      plt.xticks([])
+      plt.yticks([])
+
+  plt.show()
+
 if __name__ == "__main__":
-  main()
+  # main()
+  test()

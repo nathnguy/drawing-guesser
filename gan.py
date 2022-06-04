@@ -18,7 +18,8 @@ import skimage
 train_data_length = 1024
 
 torch.manual_seed(111)
-drawings = np.load('data/duck.npy').astype('float32')
+# drawings = np.load('data/duck.npy').astype('float32')
+drawings = np.load('data/duck.npy').reshape(-1, 1, 28, 28).astype('float64')
 drawings = drawings[:train_data_length]
 drawings /= 255.0
 drawings -= 0.5
@@ -28,7 +29,15 @@ drawings /= 0.5
 train_data = torch.tensor(drawings)
 train_labels = torch.zeros(train_data_length)
 
-train_set = TensorDataset(train_data, train_labels)
+transform = transforms.Compose(
+    [transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))]
+)
+
+train_set = torchvision.datasets.MNIST(
+    root=".", train=True, download=True, transform=transform
+)
+
+# train_set = TensorDataset(train_data, train_labels)
 
 batch_size = 32
  
@@ -44,15 +53,15 @@ discriminator = Discriminator().to(device=device)
 generator = Generator().to(device=device)
 
 # parameters
-lr = 0.00005
-num_epochs = 100
+lr = 0.0001
+num_epochs = 50
 loss_function = nn.BCELoss()
 
 optimizer_discriminator = torch.optim.Adam(discriminator.parameters(), lr=lr)
 optimizer_generator = torch.optim.Adam(generator.parameters(), lr=lr)
 
 for epoch in range(num_epochs):
-    for n, (real_samples, _) in enumerate(train_loader):
+    for n, (real_samples, mnist_labesls) in enumerate(train_loader):
         # Data for training the discriminator
         real_samples = real_samples.to(device=device)
         real_samples_labels = torch.ones((batch_size, 1)).to(
@@ -72,8 +81,8 @@ for epoch in range(num_epochs):
 
         # Training the discriminator
         discriminator.zero_grad()
-        # output_discriminator = discriminator(all_samples)
-        output_discriminator = discriminator(torch.tensor([skimage.util.random_noise(x.detach().numpy(), mode='gaussian', mean=0, var=0.05, clip=True).astype('float32') for x in all_samples]))
+        output_discriminator = discriminator(all_samples)
+        # output_discriminator = discriminator(torch.tensor([skimage.util.random_noise(x.detach().numpy(), mode='gaussian', mean=0, var=0.05, clip=True).astype('float32') for x in all_samples]))
         loss_discriminator = loss_function(
             output_discriminator, all_samples_labels
         )

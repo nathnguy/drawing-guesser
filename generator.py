@@ -20,5 +20,5 @@ class Generator(nn.Module):
 
     def forward(self, x):
         output = self.model(x)
-        # output = output.view(x.size(0), 1, 28, 28)
+        output = output.view(x.size(0), 1, 28, 28)
         return output
