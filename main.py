@@ -5,6 +5,7 @@ from graphics import *
 from harris import num_corners
 
 import numpy as np
+import random
 
 # window size
 WIDTH = 500
@@ -14,13 +15,17 @@ IMAGE_SIZE = 28
 
 COORD_SIZE = 125
 
-NUM_SAMPLES = 1000
+NUM_SAMPLES = 2000
+
+LABEL_CORNERS = True
 
 win = GraphWin("Bird Drawing Guesser", WIDTH, HEIGHT, autoflush=False)
 win.setCoords(0, COORD_SIZE, COORD_SIZE, 0)
 objects = [] # all objects currently drawn
 
 padding = (COORD_SIZE - IMAGE_SIZE) / 2
+
+categories = ['duck', 'flamingo', 'owl', 'parrot', 'swan']
 
 # drawing: contains stroke information
 def draw(drawing):
@@ -51,7 +56,87 @@ def label_corners(corners):
     c.draw(win)
     objects.append(c)
 
+# gets data from all categories using corner detection method
+def get_corner_data():
+  result = {}
+  for category in categories:
+    print(category + ':')
+    drawings = np.load('data/' + category + '.npy')
+    # drawings = np.random.choice(drawings, size=NUM_SAMPLES, replace=False)
+    drawings = drawings[:NUM_SAMPLES]
+
+    # from low to high complexity
+    levels = [[], [], []]
+
+    # take random sample of drawings
+    for drawing in drawings:
+      corners, locs = num_corners(np.reshape(drawing, (-1, IMAGE_SIZE)))
+      if corners < 150:
+        levels[0].append((drawing, locs))
+      elif corners > 250 and corners < 300:
+        levels[1].append((drawing, locs))
+      elif corners > 400 and corners < 450:
+        levels[2].append((drawing, locs))
+
+    print('Level 1: ' + str(len(levels[0])))
+    print('Level 2: ' + str(len(levels[1])))
+    print('Level 3: ' + str(len(levels[2])))
+    result[category] = levels
+
+  return result
+
 def main():
+  print('Loading data...')
+  data = get_corner_data()
+
+  # game loop
+  print('Hi! Welcome to Bird Drawing Guesser. Press enter to continue.')
+  input()
+
+  while True:
+
+    print('Types of birds: ' + str(categories))
+
+    random.shuffle(categories)
+
+    for category in categories:
+      print('What kind of bird is this?')
+      for level in range(3):
+        print()
+        print('Level ' + str(level + 1))
+        clear()
+
+        if data[category][level]:
+          arr = data[category][level]
+        else:
+          arr = data[category][1]
+        
+        drawing = arr[np.random.randint(len(arr))]
+        draw(drawing[0])
+
+        if LABEL_CORNERS:
+          label_corners(drawing[1])
+
+        val = input('Guess: ').lower().strip()
+
+        if val == category:
+          print('Correct!')
+          break
+        else:
+          print('Incorrect.')
+      print('This is a ' + category + '!')
+      print('Press enter to continue.')
+      input()
+
+    val = input('Enter "q" to quit. Otherwise, continue playing! ').lower().strip()
+    if val == 'q':
+      break
+  
+  print('Thanks for playing!')
+  
+  win.close()
+
+def test():
   drawings = np.load('data/duck.npy')
 
   level1 = []
