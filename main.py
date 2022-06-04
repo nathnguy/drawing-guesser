@@ -1,10 +1,10 @@
 # main.py
-# Binary file parsing: https://github.com/googlecreativelab/quickdraw-dataset/blob/master/examples/binary_file_parser.py
 
 from parser import unpack_drawings
 from graphics import *
 from harris import num_corners
 
+import random
 import numpy as np
 
 # window size
@@ -15,10 +15,13 @@ IMAGE_SIZE = 256
 
 NUM_SAMPLES = 100
 
-win = GraphWin("Generative Line Art", WIDTH, HEIGHT, autoflush=False)
+win = GraphWin("Bird Drawing Guesser", WIDTH, HEIGHT, autoflush=False)
 objects = [] # all objects currently drawn
+
 padding_x = (WIDTH - IMAGE_SIZE) / 2
 padding_y = (HEIGHT - IMAGE_SIZE) / 2
+
+categories = ['duck', 'flamingo', 'owl', 'parrot', 'swan']
 
 # drawing: contains stroke information
 def draw(drawing):
@@ -45,40 +48,79 @@ def clear():
     obj.undraw()
   objects.clear()
 
+# gets data from all categories using corner detection method
+def get_corner_data():
+  result = {}
+  for category in categories:
+    print(category + ':')
+    drawings = list(unpack_drawings('data/' + category + '.bin'))
+    drawings = np.random.choice(drawings, size=NUM_SAMPLES, replace=False)
+    # drawings = drawings[:NUM_SAMPLES]
+
+    # from low to high complexity
+    levels = [[], [], []]
+
+    # take random sample of drawings
+    for drawing in drawings:
+      corners = num_corners(drawing['pixels'])
+      if corners < 75:
+        levels[0].append(drawing)
+      elif corners > 100 and corners < 150:
+        levels[1].append(drawing)
+      elif corners > 200 and corners < 250:
+        levels[2].append(drawing)
+
+    print('Level 1: ' + str(len(levels[0])))
+    print('Level 2: ' + str(len(levels[1])))
+    print('Level 3: ' + str(len(levels[2])))
+    result[category] = levels
+
+  return result
+
 def main():
-  drawings = list(unpack_drawings('data/duck.bin'))
+  print('Loading data...')
+  data = get_corner_data()
 
-  level1 = []
-  level2 = []
-  level3 = []
-
-  # take random sample of drawings
-  drawings = np.random.choice(drawings, NUM_SAMPLES, replace=False)
-  for drawing in drawings:
-    # drawing['corners'] = num_corners(drawing['pixels'])
-    corners = num_corners(drawing['pixels'])
-    if corners < 50:
-      level1.append(drawing)
-    elif corners > 100 and corners < 125:
-      level2.append(drawing)
-    elif corners > 175 and corners < 200:
-      level3.append(drawing)
-
-  print(len(level1))
-  print(len(level2))
-  print(len(level3))
+  # game loop
+  print('Hi! Welcome to Bird Drawing Guesser. Press enter to continue.')
+  input()
 
   while True:
-    key = win.getKey()
-    clear()
-    if key == '1':
-      draw(np.random.choice(level1))
-    elif key == '2':
-      draw(np.random.choice(level2))
-    elif key == '3':
-      draw(np.random.choice(level3))
-    elif key == 'q':
+
+    print('Types of birds: ' + str(categories))
+
+    random.shuffle(categories)
+
+    for category in categories:
+      print('What kind of bird is this?')
+      for level in range(3):
+        print()
+        print('Level ' + str(level + 1))
+        clear()
+
+        if data[category][level]:
+          arr = data[category][level]
+        else:
+          arr = data[category][1]
+
+        draw(np.random.choice(arr))
+
+        val = input('Guess: ').lower().strip()
+
+        if val == category:
+          print('Correct!')
+          break
+        else:
+          print('Incorrect.')
+      print('This is a ' + category + '!')
+      print('Press enter to continue.')
+      input()
+
+    val = input('Enter "q" to quit. Otherwise, continue playing! ').lower().strip()
+    if val == 'q':
       break
+  
+  print('Thanks for playing!')
   
   win.close()
 

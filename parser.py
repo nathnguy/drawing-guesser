@@ -1,5 +1,6 @@
 # parser.py
 # parses .bin simplied drawing files
+# https://github.com/googlecreativelab/quickdraw-dataset/blob/master/examples/binary_file_parser.py
 
 import struct
 from struct import unpack

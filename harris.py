@@ -9,7 +9,7 @@ import numpy as np
 # k: sensitivity factor
 #   - separates corners from edges
 #   - smaller k for detecting sharper corners
-k = 0.05
+k = 0.01
 
 def gradient_x(imggray):
   ##Sobel operator kernels.
