@@ -1,7 +1,6 @@
 # main.py
 # Binary file parsing: https://github.com/googlecreativelab/quickdraw-dataset/blob/master/examples/binary_file_parser.py
 
-from parser import unpack_drawings
 from graphics import *
 from harris import num_corners
 
@@ -11,33 +10,32 @@ import numpy as np
 WIDTH = 500
 HEIGHT = 500
 
-IMAGE_SIZE = 256
+IMAGE_SIZE = 28
 
-NUM_SAMPLES = 100
+COORD_SIZE = 150
+
+NUM_SAMPLES = 1000
 
 win = GraphWin("Generative Line Art", WIDTH, HEIGHT, autoflush=False)
+win.setCoords(0, COORD_SIZE, COORD_SIZE, 0)
 objects = [] # all objects currently drawn
-padding_x = (WIDTH - IMAGE_SIZE) / 2
-padding_y = (HEIGHT - IMAGE_SIZE) / 2
+
+padding = (COORD_SIZE - IMAGE_SIZE) / 2
 
 # drawing: contains stroke information
 def draw(drawing):
-  for stroke in drawing['image']:
-    points = []
-    num_points = len(stroke[0])
-    for i in range(num_points):
-      pt = Point(stroke[0][i] + padding_x, stroke[1][i] + padding_y)
-      points.append(pt)
-    interpolate_points(points)
-
-# connect given points with straight lines
-def interpolate_points(points):
-  for i in range(1, len(points)):
-    line = Line(points[i], points[i - 1])
-    line.setFill(color_rgb(0, 0, 0))
-    line.setWidth(1)
-    line.draw(win)
-    objects.append(line)
+  i = 0
+  for row in range(IMAGE_SIZE):
+    for col in range(IMAGE_SIZE):
+      if drawing[i] > 0:
+        color = 255 - drawing[i]
+        rect = Rectangle(Point(col + padding, row + padding), 
+                        Point(col + 1 + padding, row + 1 + padding))
+        rect.setFill(color_rgb(color, color, color))
+        rect.setOutline(color_rgb(color, color, color))
+        rect.draw(win)
+        objects.append(rect)
+      i += 1
 
 # clear window
 def clear():
@@ -45,24 +43,33 @@ def clear():
     obj.undraw()
   objects.clear()
 
+def label_corners(corners):
+  for corner in corners:
+    c = Circle(Point(corner[0] + padding, corner[1] + padding), 0.5)
+    c.setOutline("red")
+    c.setWidth(0.5)
+    c.draw(win)
+    objects.append(c)
+
 def main():
-  drawings = list(unpack_drawings('data/duck.bin'))
+  drawings = np.load('data/duck.npy')
 
   level1 = []
   level2 = []
   level3 = []
 
   # take random sample of drawings
-  drawings = np.random.choice(drawings, NUM_SAMPLES, replace=False)
+  # drawings = np.random.choice(drawings, NUM_SAMPLES, replace=False)
+  drawings = drawings[:NUM_SAMPLES]
   for drawing in drawings:
     # drawing['corners'] = num_corners(drawing['pixels'])
-    corners = num_corners(drawing['pixels'])
-    if corners < 50:
-      level1.append(drawing)
-    elif corners > 100 and corners < 125:
-      level2.append(drawing)
-    elif corners > 175 and corners < 200:
-      level3.append(drawing)
+    corners, locs = num_corners(np.reshape(drawing, (-1, IMAGE_SIZE)))
+    if corners < 150:
+      level1.append((drawing, locs))
+    elif corners > 250 and corners < 300:
+      level2.append((drawing, locs))
+    elif corners > 400 and corners < 450:
+      level3.append((drawing, locs))
 
   print(len(level1))
   print(len(level2))
@@ -72,13 +79,16 @@ def main():
     key = win.getKey()
     clear()
     if key == '1':
-      draw(np.random.choice(level1))
+      drawing = level1[np.random.randint(len(level1))]
     elif key == '2':
-      draw(np.random.choice(level2))
+      drawing = level2[np.random.randint(len(level2))]
     elif key == '3':
-      draw(np.random.choice(level3))
+      drawing = level3[np.random.randint(len(level3))]
     elif key == 'q':
       break
+
+    draw(drawing[0])
+    label_corners(drawing[1])
   
   win.close()
 

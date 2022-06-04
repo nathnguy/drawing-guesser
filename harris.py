@@ -35,6 +35,7 @@ def num_corners(img):
   harris_response = detA - k * traceA ** 2
 
   result = 0
+  corners = [] # coordinates of corners
 
   for rowindex, response in enumerate(harris_response):
       for colindex, r in enumerate(response):
@@ -42,6 +43,7 @@ def num_corners(img):
           # Corner : r > 0
           # Flat: r = 0
           if r > 0:
-              result += 1  
+              result += 1
+              corners.append((colindex, rowindex))
 
-  return result
+  return result, corners
