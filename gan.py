@@ -11,10 +11,10 @@ from torchvision.utils import save_image
 import os
 import numpy as np
 
-category = 'duck'
+category = 'owl'
 
 drawings = np.load('data/' + category + '.npy').reshape(-1, 1, 28, 28).astype('float32')
-train_data_length = 32000
+train_data_length = 16000
 drawings = drawings[:train_data_length]
 drawings /= 255.0
 drawings -= 0.5

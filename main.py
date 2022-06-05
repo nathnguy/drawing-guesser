@@ -10,6 +10,7 @@ import random
 import torch
 from gan import batch_size, device, denorm
 from architecture import latent_size, G, D
+from os.path import exists
 
 
 # window size
@@ -109,6 +110,7 @@ def get_gan_images():
 
 def main():
   print('Loading data...')
+
   data = get_corner_data()
   gan_data = get_gan_images()
 

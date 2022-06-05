@@ -1,5 +1,6 @@
 # architecture.py
-# Our neural network architecture! Aimed at classifying 28x28 drawing data
+# Our neural network architecture! Defined below are our discriminator
+# and generator neural networks.
 
 import torch.nn as nn
 
