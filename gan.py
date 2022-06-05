@@ -3,7 +3,6 @@
 # GAN for generating Google QuickDraw drawings
 
 import torch
-from torchvision.datasets import MNIST
 from torch.utils.data import DataLoader, TensorDataset
 from architecture import D, G, latent_size
 import torch.nn as nn

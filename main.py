@@ -10,7 +10,6 @@ import random
 import torch
 from gan import batch_size, device, denorm
 from architecture import latent_size, G, D
-from os.path import exists
 
 
 # window size
@@ -32,8 +31,7 @@ objects = [] # all objects currently drawn
 
 padding = (COORD_SIZE - IMAGE_SIZE) / 2
 
-# categories = ['duck', 'flamingo', 'owl', 'parrot', 'swan']
-categories = ['duck']
+categories = ['duck', 'flamingo', 'owl', 'parrot', 'swan']
 
 # drawing: contains stroke information
 def draw(drawing):
