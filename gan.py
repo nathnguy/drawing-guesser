@@ -1,112 +1,137 @@
 # gan.py
-# Generative Adversarial Network
+# https://www.kaggle.com/code/kmldas/mnist-generative-adverserial-networks-in-pytorch/notebook
+# GAN for generating Google QuickDraw drawings
 
-from typing import runtime_checkable
 import torch
 import torchvision
-import torchvision.transforms as transforms
-import math
-from torch import nn
-from discriminator import Discriminator
-from generator import Generator
+from torchvision.transforms import ToTensor, Normalize, Compose
+from torchvision.datasets import MNIST
+from torch.utils.data import DataLoader, TensorDataset
+from architecture import D, G
+import torch.nn as nn
+from torchvision.utils import save_image
+import os
 import numpy as np
-from torch.utils.data import TensorDataset, DataLoader
 
-import matplotlib.pyplot as plt
-import skimage
+category = 'duck'
 
-train_data_length = 1024
+image_size = 784
+hidden_size = 256
+latent_size = 64
 
-torch.manual_seed(111)
-# drawings = np.load('data/duck.npy').astype('float32')
-drawings = np.load('data/duck.npy').reshape(-1, 1, 28, 28).astype('float64')
+drawings = np.load('data/' + category + '.npy').reshape(-1, 1, 28, 28).astype('float32')
+train_data_length = 32000
 drawings = drawings[:train_data_length]
 drawings /= 255.0
 drawings -= 0.5
 drawings /= 0.5
 
-# train_data  = torch.tensor([np.reshape(x, (-1, 28)) for x in drawings])
 train_data = torch.tensor(drawings)
 train_labels = torch.zeros(train_data_length)
 
-transform = transforms.Compose(
-    [transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))]
-)
+train_set = TensorDataset(train_data, train_labels)
 
-train_set = torchvision.datasets.MNIST(
-    root=".", train=True, download=True, transform=transform
-)
-
-# train_set = TensorDataset(train_data, train_labels)
+def denorm(x):
+    out = (x + 1) / 2
+    return out.clamp(0, 1)
 
 batch_size = 32
- 
-train_loader = DataLoader(
-    train_set, batch_size=batch_size, shuffle=True
-)
+lr = 0.0002
+# data_loader = DataLoader(mnist, batch_size, shuffle=True)
+data_loader = DataLoader(train_set, batch_size, shuffle=True)
 
-# use GPU if available
-device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+# Device configuration
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+criterion = nn.BCELoss()
+d_optimizer = torch.optim.Adam(D.parameters(), lr=lr)
+g_optimizer = torch.optim.Adam(G.parameters(), lr=lr)
+
+def reset_grad():
+    d_optimizer.zero_grad()
+    g_optimizer.zero_grad()
+
+def train_discriminator(images):
+    # Create the labels which are later used as input for the BCE loss
+    real_labels = torch.ones(batch_size, 1).to(device)
+    fake_labels = torch.zeros(batch_size, 1).to(device)
+        
+    # Loss for real images
+    outputs = D(images)
+    d_loss_real = criterion(outputs, real_labels)
+    real_score = outputs
+
+    # Loss for fake images
+    z = torch.randn(batch_size, latent_size).to(device)
+    fake_images = G(z)
+    outputs = D(fake_images)
+    d_loss_fake = criterion(outputs, fake_labels)
+    fake_score = outputs
+
+    # Combine losses
+    d_loss = d_loss_real + d_loss_fake
+    # Reset gradients
+    reset_grad()
+    # Compute gradients
+    d_loss.backward()
+    # Adjust the parameters using backprop
+    d_optimizer.step()
+    
+    return d_loss, real_score, fake_score
+
+def train_generator():
+    # Generate fake images and calculate loss
+    z = torch.randn(batch_size, latent_size).to(device)
+    fake_images = G(z)
+    labels = torch.ones(batch_size, 1).to(device)
+    g_loss = criterion(D(fake_images), labels)
+
+    # Backprop and optimize
+    reset_grad()
+    g_loss.backward()
+    g_optimizer.step()
+    return g_loss, fake_images
+
+sample_dir = 'samples'
+if not os.path.exists(sample_dir):
+    os.makedirs(sample_dir)
+
+sample_vectors = torch.randn(batch_size, latent_size).to(device)
+
+def save_fake_images(index):
+    fake_images = G(sample_vectors)
+    fake_images = fake_images.reshape(fake_images.size(0), 1, 28, 28)
+    fake_fname = 'fake_images-{0:0=4d}.png'.format(index)
+    # print('Saving', fake_fname)
+    save_image(denorm(fake_images), os.path.join(sample_dir, fake_fname), nrow=10)
 
 # train
-discriminator = Discriminator().to(device=device)
-generator = Generator().to(device=device)
 
-# parameters
-lr = 0.0001
-num_epochs = 50
-loss_function = nn.BCELoss()
-
-optimizer_discriminator = torch.optim.Adam(discriminator.parameters(), lr=lr)
-optimizer_generator = torch.optim.Adam(generator.parameters(), lr=lr)
+num_epochs = 300
+total_step = len(data_loader)
+d_losses, g_losses, real_scores, fake_scores = [], [], [], []
 
 for epoch in range(num_epochs):
-    for n, (real_samples, mnist_labesls) in enumerate(train_loader):
-        # Data for training the discriminator
-        real_samples = real_samples.to(device=device)
-        real_samples_labels = torch.ones((batch_size, 1)).to(
-            device=device
-        )
-        latent_space_samples = torch.randn((batch_size, 100)).to(
-            device=device
-        )
-        generated_samples = generator(latent_space_samples)
-        generated_samples_labels = torch.zeros((batch_size, 1)).to(
-            device=device
-        )
-        all_samples = torch.cat((real_samples, generated_samples))
-        all_samples_labels = torch.cat(
-            (real_samples_labels, generated_samples_labels)
-        )
+    for i, (images, _) in enumerate(data_loader):
+        # Load a batch & transform to vectors
+        images = images.reshape(batch_size, -1).to(device)
+        
+        # Train the discriminator and generator
+        d_loss, real_score, fake_score = train_discriminator(images)
+        g_loss, fake_images = train_generator()
+        
+        # Inspect the losses
+        if (i+1) % 200 == 0:
+            d_losses.append(d_loss.item())
+            g_losses.append(g_loss.item())
+            real_scores.append(real_score.mean().item())
+            fake_scores.append(fake_score.mean().item())
+            print('Epoch [{}/{}], Step [{}/{}], d_loss: {:.4f}, g_loss: {:.4f}, D(x): {:.2f}, D(G(z)): {:.2f}' 
+                  .format(epoch, num_epochs, i+1, total_step, d_loss.item(), g_loss.item(), 
+                          real_score.mean().item(), fake_score.mean().item()))
+        
+    # Sample and save images
+    save_fake_images(epoch+1)
 
-        # Training the discriminator
-        discriminator.zero_grad()
-        output_discriminator = discriminator(all_samples)
-        # output_discriminator = discriminator(torch.tensor([skimage.util.random_noise(x.detach().numpy(), mode='gaussian', mean=0, var=0.05, clip=True).astype('float32') for x in all_samples]))
-        loss_discriminator = loss_function(
-            output_discriminator, all_samples_labels
-        )
-        loss_discriminator.backward()
-        optimizer_discriminator.step()
-
-        # Data for training the generator
-        latent_space_samples = torch.randn((batch_size, 100)).to(
-            device=device
-        )
-
-        # Training the generator
-        generator.zero_grad()
-        generated_samples = generator(latent_space_samples)
-        output_discriminator_generated = discriminator(generated_samples)
-        loss_generator = loss_function(
-            output_discriminator_generated, real_samples_labels
-        )
-        loss_generator.backward()
-        optimizer_generator.step()
-
-        # Show loss
-        if n == batch_size - 1:
-            print(f"Epoch: {epoch} Loss D.: {loss_discriminator}")
-            print(f"Epoch: {epoch} Loss G.: {loss_generator}")
-
-torch.save(generator.state_dict(), 'model/generator.pth')
+torch.save(D.state_dict(), 'model/d_' + category + '.pth')
+torch.save(G.state_dict(), 'model/g_' + category + '.pth')

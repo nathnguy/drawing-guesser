@@ -2,18 +2,23 @@
 # Our neural network architecture! Aimed at classifying 28x28 drawing data
 
 import torch.nn as nn
-import torch.nn.functional as F
-import torch
 
-class SimpleNet(nn.Module):
-    def __init__(self, inputs=28*28, hidden=512, outputs=10):
-        super(SimpleNet, self).__init__()
-        self.fc1 = nn.Linear(inputs, hidden)
-        self.fc2 = nn.Linear(hidden, outputs)
+image_size = 784
+hidden_size = 256
+latent_size = 64
 
-    def forward(self, x):
-        x = torch.flatten(x, 1)
-        x = self.fc1(x)
-        x = F.relu(x)  # activaction function: 92.4% -> 98.6% accuracy
-        x = self.fc2(x)
-        return x
+D = nn.Sequential(
+    nn.Linear(image_size, hidden_size),
+    nn.LeakyReLU(0.2),
+    nn.Linear(hidden_size, hidden_size),
+    nn.LeakyReLU(0.2),
+    nn.Linear(hidden_size, 1),
+    nn.Sigmoid())
+
+G = nn.Sequential(
+    nn.Linear(latent_size, hidden_size),
+    nn.ReLU(),
+    nn.Linear(hidden_size, hidden_size),
+    nn.ReLU(),
+    nn.Linear(hidden_size, image_size),
+    nn.Tanh())

@@ -187,6 +187,7 @@ def test():
   device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
   generator = Generator()
   generator.load_state_dict(torch.load('model/generator.pth'))
+  generator.eval()
   latent_space_samples = torch.randn(batch_size, 100).to(device=device)
   generated_samples = generator(latent_space_samples)
 
@@ -202,3 +203,21 @@ def test():
 if __name__ == "__main__":
   # main()
   test()
+
+# drawings = np.load('data/duck.npy').reshape(-1, 1, 28, 28).astype('float64')
+# drawings = drawings[:train_data_length]
+# drawings /= 255.0
+# drawings -= 0.5
+# drawings /= 0.5
+
+# # train_data  = torch.tensor([np.reshape(x, (-1, 28)) for x in drawings])
+# train_data = torch.tensor(drawings)
+# train_labels = torch.zeros(train_data_length)
+
+# train_set = TensorDataset(train_data, train_labels)
+
+# batch_size = 32
+ 
+# train_loader = DataLoader(
+#     train_set, batch_size=batch_size, shuffle=True
+# )
