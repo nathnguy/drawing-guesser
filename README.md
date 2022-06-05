@@ -2,6 +2,8 @@
 by Nathan Nguyen\
 for CSE 455 Spring '22
 
+[Demo](https://youtu.be/36MyLo7OZE0)
+
 ![drawings](img/cover.png)
 
 ## Summary
