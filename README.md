@@ -12,3 +12,5 @@ I used Google's [Quick, Draw!](https://quickdraw.withgoogle.com/data) dataset. O
 ## Defining Complexity
 
 ## Adding GANs
+
+## Features for the Future
