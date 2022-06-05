@@ -1,2 +1,7 @@
 data/ filter=lfs diff=lfs merge=lfs -text
 data/*.npy filter=lfs diff=lfs merge=lfs -text
+data/duck.npy filter=lfs diff=lfs merge=lfs -text
+data/flamingo.npy filter=lfs diff=lfs merge=lfs -text
+data/owl.npy filter=lfs diff=lfs merge=lfs -text
+data/parrot.npy filter=lfs diff=lfs merge=lfs -text
+data/swan.npy filter=lfs diff=lfs merge=lfs -text

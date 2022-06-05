@@ -11,7 +11,7 @@ from torchvision.utils import save_image
 import os
 import numpy as np
 
-category = 'owl'
+category = 'parrot'
 
 drawings = np.load('data/' + category + '.npy').reshape(-1, 1, 28, 28).astype('float32')
 train_data_length = 16000
