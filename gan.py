@@ -3,21 +3,15 @@
 # GAN for generating Google QuickDraw drawings
 
 import torch
-import torchvision
-from torchvision.transforms import ToTensor, Normalize, Compose
 from torchvision.datasets import MNIST
 from torch.utils.data import DataLoader, TensorDataset
-from architecture import D, G
+from architecture import D, G, latent_size
 import torch.nn as nn
 from torchvision.utils import save_image
 import os
 import numpy as np
 
 category = 'duck'
-
-image_size = 784
-hidden_size = 256
-latent_size = 64
 
 drawings = np.load('data/' + category + '.npy').reshape(-1, 1, 28, 28).astype('float32')
 train_data_length = 32000
@@ -106,32 +100,41 @@ def save_fake_images(index):
     save_image(denorm(fake_images), os.path.join(sample_dir, fake_fname), nrow=10)
 
 # train
+def train():
+    num_epochs = 300
+    total_step = len(data_loader)
+    d_losses, g_losses, real_scores, fake_scores = [], [], [], []
 
-num_epochs = 300
-total_step = len(data_loader)
-d_losses, g_losses, real_scores, fake_scores = [], [], [], []
+    for epoch in range(num_epochs):
+        for i, (images, _) in enumerate(data_loader):
+            # Load a batch & transform to vectors
+            images = images.reshape(batch_size, -1).to(device)
+            
+            # Train the discriminator and generator
+            d_loss, real_score, fake_score = train_discriminator(images)
+            g_loss, fake_images = train_generator()
+            
+            # Inspect the losses
+            if (i+1) % 200 == 0:
+                d_losses.append(d_loss.item())
+                g_losses.append(g_loss.item())
+                real_scores.append(real_score.mean().item())
+                fake_scores.append(fake_score.mean().item())
+                print('Epoch [{}/{}], Step [{}/{}], d_loss: {:.4f}, g_loss: {:.4f}, D(x): {:.2f}, D(G(z)): {:.2f}' 
+                    .format(epoch, num_epochs, i+1, total_step, d_loss.item(), g_loss.item(), 
+                            real_score.mean().item(), fake_score.mean().item()))
+            
+        # Sample and save images
+        save_fake_images(epoch+1)
 
-for epoch in range(num_epochs):
-    for i, (images, _) in enumerate(data_loader):
-        # Load a batch & transform to vectors
-        images = images.reshape(batch_size, -1).to(device)
-        
-        # Train the discriminator and generator
-        d_loss, real_score, fake_score = train_discriminator(images)
-        g_loss, fake_images = train_generator()
-        
-        # Inspect the losses
-        if (i+1) % 200 == 0:
-            d_losses.append(d_loss.item())
-            g_losses.append(g_loss.item())
-            real_scores.append(real_score.mean().item())
-            fake_scores.append(fake_score.mean().item())
-            print('Epoch [{}/{}], Step [{}/{}], d_loss: {:.4f}, g_loss: {:.4f}, D(x): {:.2f}, D(G(z)): {:.2f}' 
-                  .format(epoch, num_epochs, i+1, total_step, d_loss.item(), g_loss.item(), 
-                          real_score.mean().item(), fake_score.mean().item()))
-        
-    # Sample and save images
-    save_fake_images(epoch+1)
+    torch.save(D.state_dict(), 'model/d_' + category + '.pth')
+    torch.save(G.state_dict(), 'model/g_' + category + '.pth')
 
-torch.save(D.state_dict(), 'model/d_' + category + '.pth')
-torch.save(G.state_dict(), 'model/g_' + category + '.pth')
+if __name__ == '__main__':
+    train()
+
+# testing loading saved models
+# G.load_state_dict(torch.load('model/g_duck.pth'))
+# G.eval()
+# save_fake_images(0)
+
